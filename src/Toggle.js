@@ -2,12 +2,40 @@ import React from 'react';
 
 import Switch from './switch';
 import './App.css';
+const ToggleContext = React.createContext();
+
+function ToggleConsumer(props) {
+  return (
+    <ToggleContext.Consumer {...props}>
+      {context => {
+        if (!context) {
+          throw new Error(
+            `Toggle compound components cannot be rendered outside the Toggle component`,
+          )
+        }
+        return props.children(context)
+      }}
+    </ToggleContext.Consumer>
+  )
+}
 
 class Toggle extends React.Component {
-  static On = ({on, children}) => (on ? children : null)
-  static Off = ({on, children}) => (on ? null : children)
-  static Button = ({on, toggle, ...props}) => (
-    <Switch on={on} onClick={toggle} {...props} />
+  static On = ({children}) => (
+    <ToggleConsumer>
+      {({on}) => (on ? children : null)}
+    </ToggleConsumer>
+  )
+  static Off = ({children}) => (
+    <ToggleConsumer>
+      {({on}) => (on ? null : children)}
+    </ToggleConsumer>
+  )
+  static Button = props => (
+    <ToggleConsumer>
+      {({on, toggle}) => (
+        <Switch on={on} onClick={toggle} {...props} />
+      )}
+    </ToggleConsumer>
   )
   state = {on: false}
   toggle = () =>
@@ -16,11 +44,12 @@ class Toggle extends React.Component {
       () => this.props.onToggle(this.state.on),
     )
   render() {
-    return React.Children.map(this.props.children, child =>
-      React.cloneElement(child, {
-        on: this.state.on,
-        toggle: this.toggle,
-      }),
+    return (
+      <ToggleContext.Provider
+        value={{on: this.state.on, toggle: this.toggle}}
+      >
+        {this.props.children}
+      </ToggleContext.Provider>
     )
   }
 }
